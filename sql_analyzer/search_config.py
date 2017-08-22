@@ -80,7 +80,7 @@ class SearchConfig():
     def query_generator_test(self):
         for file_extension in [self.EXT_SQL]:
             for query_type in [self.Q_CREATE_DB]:
-                for file_size in range(2017, 2018):
+                for file_size in range(1, 30):
                     param_tupple = (query_type, file_extension, file_size)
                     yield (param_tupple, u'{} in:file extension:{} size:{}'.format(query_type,
                                                                                    file_extension,

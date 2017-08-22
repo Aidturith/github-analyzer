@@ -2,8 +2,8 @@
 
 from sql_analyzer.search_config import SearchConfig
 from sql_analyzer.db_declarative import (get_or_create,
-                                         Base, User, Search, Anomaly, File,
-    Repo)
+                                         Base, User, Search, Anomaly, File, Repo,
+                                         Database)
 
 from web.parser import WebParser
 
@@ -31,7 +31,8 @@ class GitCrawler():
         
         # database stuff
         # TODO db_config
-        engine              = create_engine('sqlite:///:memory:', echo=False)
+        #engine              = create_engine('sqlite:///:memory:', echo=False)
+        engine              = create_engine('sqlite:///database.db', echo=False)
         Base.metadata.bind  = engine
         DBSession           = sessionmaker(bind=engine)
         self.session        = DBSession()
@@ -56,6 +57,7 @@ class GitCrawler():
             findings = self.github.search_code(query)
             self.web_parser.throttle.tick()
             
+            i = 0
             for i, entry in enumerate(findings):
                 #print(len(findings.items))
                 self.web_parser.throttle.tick()
@@ -65,6 +67,15 @@ class GitCrawler():
                                                                        'raw.githubusercontent.com')
                 file_path = entry.path
                 repository = entry.repository
+                
+                
+                # register user and repo
+                user_name, repo_name = str(repository).split('/')
+                created, user_itm = get_or_create(self.session, User, name=user_name)
+                created, repo_itm = get_or_create(self.session, Repo, name=repo_name)
+                repo_itm.user = user_itm
+                self.session.commit()
+                
                 
                 # get file
                 # content.decode('utf8')
@@ -79,13 +90,11 @@ class GitCrawler():
                 
                 # register file in db
                 file_itm = File(hash=file_hash, path='{}/{}'.format(repository, file_path))
+                file_itm.repo = repo_itm
+                file_itm.search = search_itm
                 self.session.add(file_itm)
                 self.session.commit()
                 
-                # register user and repo
-                user_name, repo_name = str(repository).split('/')
-                created, user_itm = get_or_create(self.session, User, name=user_name)
-                created, repo_itm = get_or_create(self.session, Repo, name=repo_name)
                 
                 #print(file_content)
                 if query_type == self.search.Q_CREATE_DB:
@@ -140,10 +149,11 @@ class GitCrawler():
         
         print('Elapsed: {}'.format(timeit.default_timer() - self.start_time))
         #pprint(self.session.query(Search).all())
-        #pprint(self.session.query(Anomaly).all())
+        pprint(self.session.query(Anomaly).all())
         #pprint(self.session.query(File).all())
         #pprint(self.session.query(User).order_by(User.name).all())
         #pprint(self.session.query(Repo).all())
+        pprint(self.session.query(Database).order_by(Database.count).all())
     
     
     def handle_create_db(self, match, search_itm, file_itm):
@@ -163,7 +173,12 @@ class GitCrawler():
             get_or_create(self.session, Anomaly, sql_query=match.group(0),
                           search=search_itm, file=file_itm)
         else:
-            pass
+            created, db_itm = get_or_create(self.session, Database, name=db_name)
+            if not created:
+                db_itm.count += 1
+            db_itm.search = search_itm
+            db_itm.file = file_itm
+            self.session.commit()
     
     def handle_drop_db(self, match):
         pass

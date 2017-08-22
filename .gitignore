@@ -103,3 +103,4 @@ ENV/
 .pydevproject
 .project
 dump/
+sql_analyzer/database.db
