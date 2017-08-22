@@ -1,0 +1,30 @@
+# search and index tables, fields and value from github
+# files: php
+# statements: DROP TABLE IF EXISTS, select from where, CREATE TABLE
+# https://github.com/search?o=asc&q=select+from+where+in%3Afile+extension%3Ajava&s=indexed&type=Code&utf8=%E2%9C%93
+# keep info on project, techno, filename, count, sql_statement
+# github crawler: "select from where in:file extension:php"
+
+https://github.com/coinables/Book/blob/abca60e7fd791ca5e47003840ed4c1f3d57bd160/178.php
+https://raw.githubusercontent.com/coinables/Book/abca60e7fd791ca5e47003840ed4c1f3d57bd160/178.php
+
+garder la taille du fichier
+compress, b64 et md5 du fichier
+check si le fichier ne contient pas une requete en double
+extensions: html, htm, php, js, xml, py, java, c, cpp, cs, sql, h, css, txt
+gh = login('user', password='pass')
+user = gh.me()
+print(gh)
+pagination: "select from where size:130..139 in:file extension:php"
+test_q4 = gh.search_code("select from where in:file extension:php", number=10)
+for r in test_q4:
+    print(r)
+test_res = test_q4.items[1]
+pprint(test_res)
+pprint(test_res['html_url'])
+requests.get('https://raw.githubusercontent.com/coinables/Book/abca60e7fd791ca5e47003840ed4c1f3d57bd160/178.php')
+r.text
+pprint(gh.rate_limit())
+# 30 pages * 100 lignes par minutes
+3000 lignes par minute, une ligne toutes les 0.02 secondes
+/SELECT(.+)FROM(.+)WHERE(.+)(;|#|--|\n)/gm
