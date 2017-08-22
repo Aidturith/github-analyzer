@@ -17,14 +17,14 @@ class SearchConfig():
     
     REGEX_CREATE_DB     = re.compile(r'create database ([^;#\n]+)',
                                      re.IGNORECASE)
-    REGEX_DROP_DBB      = re.compile(r'')
-    REGEX_CREATE_TABLE  = re.compile(r'')
-    REGEX_ALTER_TABLE   = re.compile(r'')
-    REGEX_DROP_TABLE    = re.compile(r'')
-    REGEX_SELECT        = re.compile(r'')
-    REGEX_INSERT        = re.compile(r'')
-    REGEX_UPDATE        = re.compile(r'')
-    REGEX_DELETE        = re.compile(r'')
+    REGEX_DROP_DBB      = re.compile(r'', re.IGNORECASE)
+    REGEX_CREATE_TABLE  = re.compile(r'', re.IGNORECASE)
+    REGEX_ALTER_TABLE   = re.compile(r'', re.IGNORECASE)
+    REGEX_DROP_TABLE    = re.compile(r'', re.IGNORECASE)
+    REGEX_SELECT        = re.compile(r'', re.IGNORECASE)
+    REGEX_INSERT        = re.compile(r'', re.IGNORECASE)
+    REGEX_UPDATE        = re.compile(r'', re.IGNORECASE)
+    REGEX_DELETE        = re.compile(r'', re.IGNORECASE)
     
     QUERIES = {Q_CREATE_DB:     REGEX_CREATE_DB,
                Q_DROP_DB:       REGEX_DROP_DBB,
@@ -69,20 +69,22 @@ class SearchConfig():
     MAX_SIZE = 500000
     
     def query_generator(self):
-        for extension in self.EXTENSIONS:
-            for q_type in self.QUERIES:
-                for size in range(self.MIN_SIZE, self.MAX_SIZE):
-                    yield (q_type, u'{} in:file extension:{} size:{}'.format(q_type,
-                                                                             extension,
-                                                                             size))
+        for file_extension in self.EXTENSIONS:
+            for query_type in self.QUERIES:
+                for file_size in range(self.MIN_SIZE, self.MAX_SIZE):
+                    param_tupple = (query_type, file_extension, file_size)
+                    yield (param_tupple, u'{} in:file extension:{} size:{}'.format(query_type,
+                                                                                   file_extension,
+                                                                                   file_size))
     
     def query_generator_test(self):
-        for extension in [self.EXT_SQL]:
-            for q_type in [self.Q_CREATE_DB]:
-                for size in range(1000, 1001):
-                    yield (q_type, u'{} in:file extension:{} size:{}'.format(q_type,
-                                                                             extension,
-                                                                             size))
+        for file_extension in [self.EXT_SQL]:
+            for query_type in [self.Q_CREATE_DB]:
+                for file_size in range(2017, 2018):
+                    param_tupple = (query_type, file_extension, file_size)
+                    yield (param_tupple, u'{} in:file extension:{} size:{}'.format(query_type,
+                                                                                   file_extension,
+                                                                                   file_size))
 
 #search = SearchConfig()
 #for q in search.query_generator():

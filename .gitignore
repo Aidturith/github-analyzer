@@ -102,3 +102,4 @@ ENV/
 .settings/org.eclipse.core.resources.prefs
 .pydevproject
 .project
+dump/
