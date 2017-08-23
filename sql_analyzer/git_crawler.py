@@ -26,13 +26,13 @@ class GitCrawler():
     def __init__(self, username=None, password=None, token=None):
         self.start_time = timeit.default_timer()
         self.search = SearchConfig()
-        self.web_parser = WebParser(url='', max_req=3000, per_sec=60.0)
+        self.web_parser = WebParser(url='', max_req=3000, per_sec=2 * 60.0)
         self.github = login(username, password, token)
         
         # database stuff
         # TODO db_config
-        #engine              = create_engine('sqlite:///:memory:', echo=False)
-        engine              = create_engine('sqlite:///database.db', echo=False)
+        engine              = create_engine('sqlite:///:memory:', echo=False)
+        #engine              = create_engine('sqlite:///database.db', echo=False)
         Base.metadata.bind  = engine
         DBSession           = sessionmaker(bind=engine)
         self.session        = DBSession()
@@ -44,14 +44,15 @@ class GitCrawler():
     def run(self):
         for dict_entry in self.search.query_generator_test():
             param_tupple, query = dict_entry
-            query_type, file_extension, file_size = param_tupple
+            query_type, file_extension, file_size_min, file_size_max = param_tupple
             print('>>> {}'.format(query))
             
             created, search_itm = get_or_create(self.session, Search,
                                                 query_type=query_type,
                                                 file_extension=file_extension,
-                                                file_size=file_size)
-            if not created:
+                                                file_size_min=file_size_min)
+            search_itm.file_size_max = file_size_max
+            if not created and search_itm.finished:
                 continue
             
             findings = self.github.search_code(query)
@@ -77,10 +78,17 @@ class GitCrawler():
                 self.session.commit()
                 
                 
+                #print('lol3')
+                #print(file_url)
                 # get file
                 # content.decode('utf8')
-                file_content = requests.get(file_url).text.strip()
-                self.web_parser.throttle.tick()
+                file_content = u''
+                try:
+                    file_content = requests.get(file_url).text.strip()
+                    self.web_parser.throttle.tick()
+                except requests.exceptions.ConnectionError:
+                    print('requests error!')
+                    continue
                 
                 # write file on disk
                 file_hash = hashlib.md5(file_content.encode('utf8')).hexdigest()
@@ -145,7 +153,15 @@ class GitCrawler():
             
             # update search count
             search_itm.count = i
-            self.session.commit()
+            search_itm.finished = True
+            
+            if search_itm.count == 0:
+                self.search.step += 1
+            elif search_itm.count > 500:
+                self.search.step = max(0, self.search.step - 1)
+            print('count: ' + str(search_itm.count))
+            print('steps: ' + str(self.search.step))
+            #pprint(self.github. rate_limit())
         
         print('Elapsed: {}'.format(timeit.default_timer() - self.start_time))
         #pprint(self.session.query(Search).all())
@@ -167,7 +183,7 @@ class GitCrawler():
         db_name = re.sub(r'(/\*).*(\*/)', '', db_name)  # remove comments
         db_name = re.sub(r'[\'"`]*', '', db_name)       # remove quotes
         db_name = db_name.strip()
-        #print('DB: {}'.format(db_name))
+        print('DB: {}'.format(db_name))
         
         if ' ' in db_name or not db_name:
             get_or_create(self.session, Anomaly, sql_query=match.group(0),

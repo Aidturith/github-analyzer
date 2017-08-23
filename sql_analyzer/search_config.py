@@ -68,23 +68,38 @@ class SearchConfig():
     MIN_SIZE = 10
     MAX_SIZE = 500000
     
+    def __init__(self):
+        self.step = 1
+    
     def query_generator(self):
+        file_size = 0
         for file_extension in self.EXTENSIONS:
             for query_type in self.QUERIES:
-                for file_size in range(self.MIN_SIZE, self.MAX_SIZE):
-                    param_tupple = (query_type, file_extension, file_size)
-                    yield (param_tupple, u'{} in:file extension:{} size:{}'.format(query_type,
-                                                                                   file_extension,
-                                                                                   file_size))
+                #for file_size in range(self.MIN_SIZE, self.MAX_SIZE, self.step):
+                while file_size < self.MAX_SIZE:
+                    file_size += self.step + 1
+                    param_tupple = (query_type, file_extension, file_size - self.step, file_size)
+                    yield (param_tupple, u'{} in:file extension:{} size:{}..{}'.format(query_type,
+                                                                                       file_extension,
+                                                                                       file_size - self.step,
+                                                                                       file_size))
     
     def query_generator_test(self):
+        file_size = 0
         for file_extension in [self.EXT_SQL]:
             for query_type in [self.Q_CREATE_DB]:
-                for file_size in range(1, 30):
-                    param_tupple = (query_type, file_extension, file_size)
-                    yield (param_tupple, u'{} in:file extension:{} size:{}'.format(query_type,
-                                                                                   file_extension,
-                                                                                   file_size))
+                #for file_size in range(1, 30, self.step):
+                while file_size < self.MAX_SIZE:
+                    file_size += self.step + 1
+                    #param_tupple = (query_type, file_extension, file_size)
+                    #yield (param_tupple, u'{} in:file extension:{} size:{}'.format(query_type,
+                    #                                                               file_extension,
+                    #                                                               file_size))
+                    param_tupple = (query_type, file_extension, file_size - self.step, file_size)
+                    yield (param_tupple, u'{} in:file extension:{} size:{}..{}'.format(query_type,
+                                                                                       file_extension,
+                                                                                       file_size - self.step,
+                                                                                       file_size))
 
 #search = SearchConfig()
 #for q in search.query_generator():

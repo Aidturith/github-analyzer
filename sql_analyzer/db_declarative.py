@@ -1,14 +1,9 @@
 # -*- coding: utf-8 -*-
 
-import zlib
-import base64
-
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import func
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Boolean
 from sqlalchemy.orm import relationship, backref
-from sqlalchemy.ext.declarative.api import declared_attr
-from sqlalchemy.sql.schema import Index
 
 Base = declarative_base()
 
@@ -37,7 +32,9 @@ class Search(Base):
     id              = Column(Integer, primary_key=True)
     query_type      = Column(String, index=True)
     file_extension  = Column(String)
-    file_size       = Column(Integer)
+    file_size_min   = Column(Integer)
+    file_size_max   = Column(Integer)
+    finished        = Column(Boolean, default=False)
     
     count = Column(Integer)
     
@@ -50,9 +47,10 @@ class Search(Base):
                                                                        self.time_created)
     
     def github_format(self):
-        return u'{} in:file extension:{} size:{}'.format(self.query_type,
-                                                         self.file_extension,
-                                                         self.file_size)
+        return u'{} in:file extension:{} size:{}..{}'.format(self.query_type,
+                                                             self.file_extension,
+                                                             self.file_size_min,
+                                                             self.file_size_max)
 
 
 class User(Base):
