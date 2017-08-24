@@ -8,6 +8,7 @@ from sql_analyzer.db_declarative import (get_or_create,
 from web.parser import WebParser
 
 from github3 import login
+from github3.models import GitHubError
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -16,6 +17,7 @@ import re
 import requests
 import gzip
 import timeit
+import time
 
 from pprint import pprint
 import hashlib
@@ -31,13 +33,12 @@ class GitCrawler():
         
         # database stuff
         # TODO db_config
-        engine              = create_engine('sqlite:///:memory:', echo=False)
-        #engine              = create_engine('sqlite:///database.db', echo=False)
+        #engine              = create_engine('sqlite:///:memory:', echo=False)
+        engine              = create_engine('sqlite:///database.db', echo=False)
         Base.metadata.bind  = engine
         DBSession           = sessionmaker(bind=engine)
         self.session        = DBSession()
         
-        # TODO only once
         Base.metadata.create_all(engine)
     
     
@@ -59,7 +60,16 @@ class GitCrawler():
             self.web_parser.throttle.tick()
             
             i = 0
-            for i, entry in enumerate(findings):
+            while True:
+                try:
+                    entry = findings.next()
+                except StopIteration:
+                    break
+                except GitHubError as e:
+                    print(e)
+                    time.sleep(60.0)
+                    continue
+                
                 #print(len(findings.items))
                 self.web_parser.throttle.tick()
                 
@@ -113,7 +123,7 @@ class GitCrawler():
                 elif query_type == self.search.Q_DROP_DB:
                     for match in re.finditer(self.search.QUERIES[query_type],
                                              file_content):
-                        self.handle_drop_db(match)
+                        self.handle_drop_db(match, search_itm, file_itm)
                 
                 elif query_type == self.search.Q_CREATE_TABLE:
                     for match in re.finditer(self.search.QUERIES[query_type],
@@ -149,6 +159,8 @@ class GitCrawler():
                     for match in re.finditer(self.search.QUERIES[query_type],
                                              file_content):
                         self.handle_delete(match)
+                
+                i += 1
                 #print('\n')
             
             # update search count
@@ -156,9 +168,9 @@ class GitCrawler():
             search_itm.finished = True
             
             if search_itm.count == 0:
-                self.search.step += 1
+                self.search.step = self.search.step * 2
             elif search_itm.count > 500:
-                self.search.step = max(0, self.search.step - 1)
+                self.search.step = max(1, self.search.step - 1)
             print('count: ' + str(search_itm.count))
             print('steps: ' + str(self.search.step))
             #pprint(self.github. rate_limit())
@@ -173,7 +185,7 @@ class GitCrawler():
     
     
     def handle_create_db(self, match, search_itm, file_itm):
-        #print('db: {}'.format(match.group(0)))
+        print('db: {}'.format(match.group(0)))
         db_name = match.group(1).lower()
         db_name = db_name.replace('if not exists', '')  # remove statements
         db_name = re.sub(r'(owner) .*', '', db_name)
@@ -196,8 +208,26 @@ class GitCrawler():
             db_itm.file = file_itm
             self.session.commit()
     
-    def handle_drop_db(self, match):
-        pass
+    def handle_drop_db(self, match, search_itm, file_itm):
+        print('db: {}'.format(match.group(0)))
+        db_name = match.group(1).lower()
+        db_name = db_name.replace('if exists', '')  # remove statements
+        db_name = re.sub(r'(/\*).*(\*/)', '', db_name)  # remove comments
+        db_name = re.sub(r'[\'"`]*', '', db_name)       # remove quotes
+        db_name = db_name.strip()
+        print('DB: {}'.format(db_name))
+        
+        if not re.match(r'^[a-z0-9\-_]+$', db_name):
+        #if ' ' in db_name or not db_name:
+            get_or_create(self.session, Anomaly, sql_query=match.group(0),
+                          search=search_itm, file=file_itm)
+        else:
+            created, db_itm = get_or_create(self.session, Database, name=db_name)
+            if not created:
+                db_itm.count += 1
+            db_itm.search = search_itm
+            db_itm.file = file_itm
+            self.session.commit()
     
     def handle_create_table(self, match):
         pass
