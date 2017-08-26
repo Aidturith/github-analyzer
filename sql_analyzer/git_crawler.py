@@ -34,7 +34,7 @@ class GitCrawler():
         # database stuff
         # TODO db_config
         #engine              = create_engine('sqlite:///:memory:', echo=False)
-        engine              = create_engine('sqlite:///database.db', echo=False)
+        engine              = create_engine('sqlite:///../var/db/database.db', echo=False)
         Base.metadata.bind  = engine
         DBSession           = sessionmaker(bind=engine)
         self.session        = DBSession()
@@ -103,7 +103,7 @@ class GitCrawler():
                 # write file on disk
                 file_hash = hashlib.md5(file_content.encode('utf8')).hexdigest()
                 if not self.session.query(exists().where(File.hash==file_hash)).scalar():
-                    with gzip.open('../dump/{}.gz'.format(file_hash), 'wb') as f:
+                    with gzip.open('../var/dump/{}.gz'.format(file_hash), 'wb') as f:
                         f.write(bytes(file_content, 'utf8'))
                 
                 # register file in db
@@ -185,15 +185,34 @@ class GitCrawler():
     
     
     def handle_create_db(self, match, search_itm, file_itm):
+        proba_dic = {
+            'mysql': 0,
+            'postgres': 0,
+            'mssql': 0,
+            'oracle': 0,
+            'db2': 0,
+            }
+        
         print('db: {}'.format(match.group(0)))
         db_name = match.group(1).lower()
-        db_name = db_name.replace('if not exists', '')  # remove statements
-        db_name = re.sub(r'(owner) .*', '', db_name)
-        db_name = re.sub(r'(with template) .*', '', db_name)
-        db_name = re.sub(r'(default) .*', '', db_name)
-        db_name = re.sub(r'(character set) .*', '', db_name)
-        db_name = re.sub(r'(/\*).*(\*/)', '', db_name)  # remove comments
-        db_name = re.sub(r'[\'"`]*', '', db_name)       # remove quotes
+        
+        db_name, proba = re.subn(r'(if not exists)', '', db_name)
+        proba_dic['mysql'] += proba
+        
+        db_name, proba = re.subn(r'(with owner|owner)\s*=?.*', '', db_name)
+        proba_dic['postgres'] += proba
+        
+        db_name, proba = re.subn(r'(with template|template)\s*=?.*', '', db_name)
+        proba_dic['postgres'] += proba
+        
+        #db_name = re.sub(r'(default) .*', '', db_name)
+        #db_name = re.sub(r'(character set) .*', '', db_name)
+        db_name,proba = re.subn(r'(\/\*!).*(\*\/)', '', db_name) # remove comments
+        proba_dic['mysql'] += proba
+        
+        
+        db_name = re.subn(r'\n+.*', '', db_name) # remove line feeds
+        db_name = re.subn(r'[\'"`]*', '', db_name) # remove quotes
         db_name = db_name.strip()
         print('DB: {}'.format(db_name))
         
@@ -211,9 +230,9 @@ class GitCrawler():
     def handle_drop_db(self, match, search_itm, file_itm):
         print('db: {}'.format(match.group(0)))
         db_name = match.group(1).lower()
-        db_name = db_name.replace('if exists', '')  # remove statements
-        db_name = re.sub(r'(/\*).*(\*/)', '', db_name)  # remove comments
-        db_name = re.sub(r'[\'"`]*', '', db_name)       # remove quotes
+        db_name = db_name.replace('if exists', '')              # remove statements
+        db_name = re.sub(r'(\/\*).*(\*\/)', '', db_name)        # remove comments
+        db_name = re.sub(r'[\'"`]*', '', db_name)               # remove quotes
         db_name = db_name.strip()
         print('DB: {}'.format(db_name))
         
@@ -230,7 +249,41 @@ class GitCrawler():
             self.session.commit()
     
     def handle_create_table(self, match):
-        pass
+        # dont lookup if test is mentioned in the repo path
+        # split table names: db.table
+        # lookup create table a, use a to define db
+        # or lookup db in the same repo?
+        print('tbl: {}'.format(match.group(0)))
+        
+        table_name = match.group(1).lower()
+        table_name = re.sub(r'(/\*).*(\*/)', '', table_name)  # remove comments
+        table_name = re.sub(r'[\'"`]*', '', table_name)       # remove quotes
+        table_name = table_name.strip()
+        #print('TBL: {}'.format(table_name))
+        
+        table_definition = match.group(2).lower().split(',')
+        #print('DEF: {}'.format(table_definition))
+        for line in table_definition:
+            try:
+                field_name, field_type = re.split('\s+', line.strip())
+                print('name & type: {} & {}'.format(field_name, field_type))
+            except ValueError:
+                pass
+        
+        
+        '''
+        if not re.match(r'^[a-z0-9\-_]+$', db_name):
+        #if ' ' in db_name or not db_name:
+            get_or_create(self.session, Anomaly, sql_query=match.group(0),
+                          search=search_itm, file=file_itm)
+        else:
+            created, db_itm = get_or_create(self.session, Database, name=db_name)
+            if not created:
+                db_itm.count += 1
+            db_itm.search = search_itm
+            db_itm.file = file_itm
+            self.session.commit()
+        '''
     
     def handle_alter_table(self, match):
         pass

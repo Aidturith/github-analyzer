@@ -15,15 +15,17 @@ class SearchConfig():
     Q_UPDATE        = u'update set'
     Q_DELETE        = u'"delete from"'
     
-    REGEX_CREATE_DB     = re.compile(r'create database ([^;#\n]+)', re.IGNORECASE)
-    REGEX_DROP_DB       = re.compile(r'drop database ([^;#\n]+)', re.IGNORECASE)
-    REGEX_CREATE_TABLE  = re.compile(r'', re.IGNORECASE)
+    REGEX_CREATE_DB     = re.compile(r'create\s*database\s*([^;#]+)', re.IGNORECASE)
+    REGEX_DROP_DB       = re.compile(r'drop\s*database\s*([^;#]+)', re.IGNORECASE)
+    REGEX_CREATE_TABLE  = re.compile(r'create\s*table\s*(.*)\s*\(([^;#]+)\)', re.IGNORECASE)
     REGEX_ALTER_TABLE   = re.compile(r'', re.IGNORECASE)
     REGEX_DROP_TABLE    = re.compile(r'', re.IGNORECASE)
     REGEX_SELECT        = re.compile(r'', re.IGNORECASE)
     REGEX_INSERT        = re.compile(r'', re.IGNORECASE)
     REGEX_UPDATE        = re.compile(r'', re.IGNORECASE)
     REGEX_DELETE        = re.compile(r'', re.IGNORECASE)
+    
+    REGEX_TABLE_DEF = re.compile(r'(.+)\s+([^,]+)', re.IGNORECASE)
     
     QUERIES = {Q_CREATE_DB:     REGEX_CREATE_DB,
                Q_DROP_DB:       REGEX_DROP_DB,
@@ -85,10 +87,10 @@ class SearchConfig():
     
     def query_generator_test(self):
         self.file_size = 0
-        for file_extension in [self.EXT_PHP]:
-            for query_type in [self.Q_DROP_DB]:
-                while self.file_size < 100:
-                    self.file_size += self.step + 1
+        for file_extension in [self.EXT_SQL]:
+            for query_type in [self.Q_CREATE_DB]:
+                while self.file_size < 1000:
+                    self.file_size += self.step
                     param_tupple = (query_type, file_extension, self.file_size - self.step, self.file_size)
                     yield (param_tupple, u'{} in:file extension:{} size:{}..{}'.format(query_type,
                                                                                        file_extension,
