@@ -15,8 +15,8 @@ class SearchConfig():
     Q_UPDATE        = u'update set'
     Q_DELETE        = u'"delete from"'
     
-    REGEX_CREATE_DB     = re.compile(r'create\s*database\s*([^;#]+)', re.IGNORECASE)
-    REGEX_DROP_DB       = re.compile(r'drop\s*database\s*([^;#]+)', re.IGNORECASE)
+    REGEX_CREATE_DB     = re.compile(r'create\s*database\s*([^;#]{,200})', re.IGNORECASE)
+    REGEX_DROP_DB       = re.compile(r'drop\s*database\s*([^;#]{,200})', re.IGNORECASE)
     REGEX_CREATE_TABLE  = re.compile(r'create\s*table\s*(.*)\s*\(([^;#]+)\)', re.IGNORECASE)
     REGEX_ALTER_TABLE   = re.compile(r'', re.IGNORECASE)
     REGEX_DROP_TABLE    = re.compile(r'', re.IGNORECASE)
@@ -86,10 +86,10 @@ class SearchConfig():
                                                                                        self.file_size))
     
     def query_generator_test(self):
-        self.file_size = 0
+        self.file_size = 1000
         for file_extension in [self.EXT_SQL]:
             for query_type in [self.Q_CREATE_DB]:
-                while self.file_size < 1000:
+                while self.file_size < 2000:
                     self.file_size += self.step
                     param_tupple = (query_type, file_extension, self.file_size - self.step, self.file_size)
                     yield (param_tupple, u'{} in:file extension:{} size:{}..{}'.format(query_type,
