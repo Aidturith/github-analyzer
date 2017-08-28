@@ -28,7 +28,7 @@ class GitCrawler():
     def __init__(self, username=None, password=None, token=None):
         self.start_time = timeit.default_timer()
         self.search = SearchConfig()
-        self.web_parser = WebParser(url='', max_req=3000, per_sec=2 * 60.0)
+        self.web_parser = WebParser(url='', max_req=3000, per_sec=2 * 60.0,delay_max=0.01)
         self.github = login(username, password, token)
         
         # database stuff
@@ -67,8 +67,13 @@ class GitCrawler():
                     break
                 except GitHubError as e:
                     print(e)
-                    time.sleep(60.0)
+                    time.sleep(5 * 60.0)
                     continue
+                except ConnectionError as e:
+                    print(e)
+                    time.sleep(5 * 60.0)
+                    continue
+                    
                 
                 #print(len(findings.items))
                 self.web_parser.throttle.tick()
@@ -207,12 +212,12 @@ class GitCrawler():
         
         #db_name = re.sub(r'(default) .*', '', db_name)
         #db_name = re.sub(r'(character set) .*', '', db_name)
-        db_name,proba = re.subn(r'(\/\*!).*(\*\/)', '', db_name) # remove comments
+        db_name, proba = re.subn(r'(\/\*!).*(\*\/)', '', db_name) # remove comments
         proba_dic['mysql'] += proba
         
         
-        db_name = re.subn(r'\n+.*', '', db_name) # remove line feeds
-        db_name = re.subn(r'[\'"`]*', '', db_name) # remove quotes
+        db_name, proba = re.subn(r'\n+.*', '', db_name) # remove line feeds
+        db_name, proba = re.subn(r'[\'"`]*', '', db_name) # remove quotes
         db_name = db_name.strip()
         print('DB: {}'.format(db_name))
         
