@@ -23,12 +23,13 @@ from pprint import pprint
 import hashlib
 from sqlalchemy.sql.expression import exists
 
+
 class GitCrawler():
     
     def __init__(self, username=None, password=None, token=None):
         self.start_time = timeit.default_timer()
         self.search = SearchConfig()
-        self.web_parser = WebParser(url='', max_req=3000, per_sec=2 * 60.0,delay_max=0.01)
+        self.web_parser = WebParser(url='', max_req=3000, per_sec=2 * 60.0, delay_max=0.01)
         self.github = login(username, password, token)
         
         # database stuff
@@ -43,7 +44,8 @@ class GitCrawler():
     
     
     def run(self):
-        for dict_entry in self.search.query_generator_test():
+            for dict_entry in self.search.query_generator_test():
+            break
             param_tupple, query = dict_entry
             query_type, file_extension, file_size_min, file_size_max = param_tupple
             print('>>> {}'.format(query))
@@ -186,7 +188,7 @@ class GitCrawler():
         #pprint(self.session.query(File).all())
         #pprint(self.session.query(User).order_by(User.name).all())
         #pprint(self.session.query(Repo).all())
-        pprint(self.session.query(Database).order_by(Database.count).all())
+        #pprint(self.session.query(Database).order_by(Database.count).all())
     
     
     def handle_create_db(self, match, search_itm, file_itm):
@@ -204,6 +206,13 @@ class GitCrawler():
         db_name, proba = re.subn(r'(if not exists)', '', db_name)
         proba_dic['mysql'] += proba
         
+        db_name, proba = re.subn(r'(default character set)\s*=?.*', '', db_name)
+        proba_dic['mysql'] += proba
+        
+        db_name, proba = re.subn(r'(character set)\s*=?.*', '', db_name)
+        proba_dic['mysql'] += proba
+        proba_dic['oracle'] += proba
+        
         db_name, proba = re.subn(r'(with owner|owner)\s*=?.*', '', db_name)
         proba_dic['postgres'] += proba
         
@@ -212,7 +221,7 @@ class GitCrawler():
         
         #db_name = re.sub(r'(default) .*', '', db_name)
         #db_name = re.sub(r'(character set) .*', '', db_name)
-        db_name, proba = re.subn(r'(\/\*!).*(\*\/)', '', db_name) # remove comments
+        db_name, proba = re.subn(r'(/\*!).+(\*/)', '', db_name) # remove comments
         proba_dic['mysql'] += proba
         
         
